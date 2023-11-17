@@ -13,3 +13,4 @@ lynx
 procps
 rsync
 vim
+build-essential
