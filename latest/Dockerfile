@@ -59,6 +59,7 @@ WORKDIR $SENAITE_INSTANCE_HOME
 
 # Mount external volume
 VOLUME /data
+VOLUME /home/senaite/senaitelims/eggs
 
 # Expose instance port
 EXPOSE 8080
