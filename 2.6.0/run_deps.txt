@@ -10,7 +10,5 @@ libtiff5
 libxml2
 libxslt1.1
 lynx
-procps
 rsync
 vim
-build-essential
