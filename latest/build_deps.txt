@@ -15,4 +15,3 @@ wget
 zlib1g-dev
 libsasl2-dev
 libldap2-dev
-libssl-dev

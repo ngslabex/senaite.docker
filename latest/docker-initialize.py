@@ -100,16 +100,24 @@ class Environment(object):
         if not [e for e in self.env if e.startswith("CORS_")]:
             return
 
-        allow_origin = self.env.get("CORS_ALLOW_ORIGIN",
+        allow_origin = self.env.get(
+            "CORS_ALLOW_ORIGIN",
             "http://localhost:3000,http://127.0.0.1:3000")
-        allow_methods = self.env.get("CORS_ALLOW_METHODS",
+        allow_methods = self.env.get(
+            "CORS_ALLOW_METHODS",
             "DELETE,GET,OPTIONS,PATCH,POST,PUT")
-        allow_credentials = self.env.get("CORS_ALLOW_CREDENTIALS", "true")
-        expose_headers = self.env.get("CORS_EXPOSE_HEADERS",
+        allow_credentials = self.env.get(
+            "CORS_ALLOW_CREDENTIALS",
+            "true")
+        expose_headers = self.env.get(
+            "CORS_EXPOSE_HEADERS",
             "Content-Length,X-My-Header")
-        allow_headers = self.env.get("CORS_ALLOW_HEADERS",
+        allow_headers = self.env.get(
+            "CORS_ALLOW_HEADERS",
             "Accept,Authorization,Content-Type,X-Custom-Header")
-        max_age = self.env.get("CORS_MAX_AGE", "3600")
+        max_age = self.env.get(
+            "CORS_MAX_AGE",
+            "3600")
         cors_conf = CORS_TEMPLACE.format(
             allow_origin=allow_origin,
             allow_methods=allow_methods,
