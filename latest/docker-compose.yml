@@ -2,40 +2,47 @@ version: "3.9"
 
 services:
 
-  zeo:
-    image: ersankose/senaite:v2.6.1
-    command: zeo
-    volumes:
-      - ./data:/data
-
   instance1:
-    image: ersankose/senaite:v2.6.1
+    image: ersankose/senaite:v2.6.2
     ports:
       - 8081:8080
-    links:
-      - zeo
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 1024MB
     environment:
-      ZEO_ADDRESS: "zeo:8080"
+      SENAITE_DB_NAME: ${SENAITE_DB_NAME}
+      SENAITE_DB_USER: ${SENAITE_DB_USER}
+      SENAITE_DB_PASSWORD: ${SENAITE_DB_PASSWORD}
+      SENAITE_DB_HOST: ${SENAITE_DB_HOST}
+    depends_on:
+      postgresql:
+        condition: service_healthy
 
   instance2:
-    image: ersankose/senaite:v2.6.1
+    image: ersankose/senaite:v2.6.2
     ports:
       - 8082:8080
-    links:
-      - zeo
-    deploy:
-      resources:
-        limits:
-          cpus: "1"
-          memory: 1024MB
     environment:
-      ZEO_ADDRESS: "zeo:8080"
+      SENAITE_DB_NAME: ${SENAITE_DB_NAME}
+      SENAITE_DB_USER: ${SENAITE_DB_USER}
+      SENAITE_DB_PASSWORD: ${SENAITE_DB_PASSWORD}
+      SENAITE_DB_HOST: ${SENAITE_DB_HOST}
+    depends_on:
+      postgresql:
+        condition: service_healthy
+
+  postgresql:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: ${SENAITE_DB_NAME}
+      POSTGRES_USER: ${SENAITE_DB_USER}
+      POSTGRES_PASSWORD: ${SENAITE_DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - senaite-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SENAITE_DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
-  data:
-    external: true
+  senaite-pgdata:
