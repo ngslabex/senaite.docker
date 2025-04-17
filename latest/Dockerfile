@@ -16,12 +16,16 @@ ENV PLONE_MAJOR=5.2 \
     SENAITE_INSTANCE_HOME=/home/senaite/senaitelims \
     SENAITE_DATA=/data \
     SENAITE_FILESTORAGE=/data/filestorage \
-    SENAITE_BLOBSTORAGE=/data/blobstorage \
-    SENAITE_DB_NAME=senaite_db \
-    SENAITE_DB_USER=senaite_user \
-    # NOTE: Only used for build-time interpolation; runtime uses .env
-    SENAITE_DB_PASSWORD=sifre \
-    SENAITE_DB_HOST=postgresql
+    SENAITE_BLOBSTORAGE=/data/blobstorage
+
+ENV DB_NAME=senaite_db
+ENV DB_USER=senaite_user
+ENV DB_PASS=sifre
+ENV DB_HOST=postgresql
+
+COPY buildout.cfg.template $SENAITE_INSTANCE_HOME/
+
+RUN envsubst < $SENAITE_INSTANCE_HOME/buildout.cfg.template > $SENAITE_INSTANCE_HOME/buildout.cfg
 
 # Create the senaite user
 RUN useradd --system -m -d $SENAITE_HOME -U -u 500 $SENAITE_USER
