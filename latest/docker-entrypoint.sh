@@ -1,55 +1,65 @@
-#!/bin/bash
-set -e
+# Base image
+FROM python:2.7-slim-buster
 
-COMMANDS="adduser debug fg foreground help kill logreopen logtail reopen_transcript run show status stop wait"
-START="console start restart"
+# Metadata
+LABEL maintainer="Ramon Bartl"
+LABEL email="rb@ridingbytes.com"
+LABEL senaite.core.version="v2.6.0"
 
-# Fixing permissions for external /data volumes
-mkdir -p /data/blobstorage /data/cache /data/filestorage /data/instance /data/log /data/zeoserver
-mkdir -p /home/senaite/senaitelims/src
-find /data  -not -user senaite -exec chown senaite:senaite {} \+
-find /home/senaite -not -user senaite -exec chown senaite:senaite {} \+
+# Environment variables
+ENV PLONE_MAJOR=5.2 \
+    PLONE_VERSION=5.2.15 \
+    PLONE_MD5=714be71e21098ab148df8681196e78ce \
+    PLONE_UNIFIED_INSTALLER=Plone-5.2.15-UnifiedInstaller-1.0 \
+    SENAITE_HOME=/home/senaite \
+    SENAITE_USER=senaite \
+    SENAITE_INSTANCE_HOME=/home/senaite/senaitelims \
+    SENAITE_DATA=/data \
+    SENAITE_FILESTORAGE=/data/filestorage \
+    SENAITE_BLOBSTORAGE=/data/blobstorage \
+    SENAITE_DB_NAME=senaite_db \
+    SENAITE_DB_USER=senaite_user \
+    SENAITE_DB_PASS=sifre \
+    SENAITE_DB_HOST=postgresql
 
+# Create senaite user and directories
+RUN useradd --system -m -d $SENAITE_HOME -U -u 500 $SENAITE_USER && \
+    mkdir -p $SENAITE_INSTANCE_HOME $SENAITE_FILESTORAGE $SENAITE_BLOBSTORAGE
 
-# Initializing from environment variables
-gosu senaite python /docker-initialize.py
+# Copy files
+COPY requirements.txt buildout.cfg.template $SENAITE_INSTANCE_HOME/
+COPY build_deps.txt run_deps.txt docker-initialize.py docker-entrypoint.sh /
 
-function git_fixture {
-  for d in `find /home/senaite/senaitelims/src -mindepth 1 -maxdepth 1 -type d`
-  do
-    if [ -d "$d/.git" ]; then
-      git config --global --add safe.directory $d
-      echo "git config --global --add safe.directory $d"
-    fi
-  done
-}
+# Install packages, build Plone/SENAITE and configure buildout
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends $(grep -vE "^\s*#" /build_deps.txt | tr "\n" " ") && \
+    apt-get install -y --no-install-recommends $(grep -vE "^\s*#" /run_deps.txt | tr "\n" " ") && \
+    apt-get install -y gettext && \
+    wget -O Plone.tgz https://launchpad.net/plone/$PLONE_MAJOR/$PLONE_VERSION/+download/$PLONE_UNIFIED_INSTALLER.tgz && \
+    echo "$PLONE_MD5 Plone.tgz" | md5sum -c - && \
+    tar -xzf Plone.tgz && \
+    cp -rv $PLONE_UNIFIED_INSTALLER/base_skeleton/* $SENAITE_INSTANCE_HOME && \
+    cp -v $PLONE_UNIFIED_INSTALLER/buildout_templates/buildout.cfg $SENAITE_INSTANCE_HOME/buildout-base.cfg && \
+    envsubst < $SENAITE_INSTANCE_HOME/buildout.cfg.template > $SENAITE_INSTANCE_HOME/buildout.cfg && \
+    rm -rf $PLONE_UNIFIED_INSTALLER Plone.tgz && \
+    cd $SENAITE_INSTANCE_HOME && \
+    pip install -r requirements.txt && \
+    buildout && \
+    ln -s $SENAITE_FILESTORAGE/ var/filestorage && \
+    ln -s $SENAITE_BLOBSTORAGE/ var/blobstorage && \
+    chown -R senaite:senaite $SENAITE_HOME $SENAITE_DATA && \
+    apt-get purge -y --auto-remove $(grep -vE "^\s*#" /build_deps.txt | tr "\n" " ") gettext && \
+    rm -rf /$SENAITE_HOME/buildout-cache /var/lib/apt/lists/*
 
-# Fix mr.developer: fatal: detected dubious ownership in repository at ...
-# https://github.com/actions/runner-images/issues/6775
-# https://github.com/senaite/senaite.docker/issues/17
-git_fixture
+# Set working directory
+WORKDIR $SENAITE_INSTANCE_HOME
 
-if [ -e "custom.cfg" ]; then
-  buildout -c custom.cfg
-  find /data  -not -user senaite -exec chown senaite:senaite {} \+
-  find /home/senaite -not -user senaite -exec chown senaite:senaite {} \+
-  gosu senaite python /docker-initialize.py
-fi
+# Mount volume for persistence
+VOLUME /data
 
-# ZEO Server
-if [[ "$1" == "zeo"* ]]; then
-  exec gosu senaite bin/$1 fg
-fi
+# Expose the instance port
+EXPOSE 8080
 
-# Instance start
-if [[ $START == *"$1"* ]]; then
-  exec gosu senaite bin/instance console
-fi
-
-# Instance helpers
-if [[ $COMMANDS == *"$1"* ]]; then
-  exec gosu senaite bin/instance "$@"
-fi
-
-# Custom
-exec "$@"
+# Entrypoint and command
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["start"]
