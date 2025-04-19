@@ -129,12 +129,94 @@ class Environment(object):
         with open(self.cors_conf, "w") as cfile:
             cfile.write(cors_conf)
 
+    def relstorage_conf(self):
+        """ RelStorage configuration from environment variables
+        """
+        if not [e for e in self.env if e.startswith("RELSTORAGE_")]:
+            return ""
+
+        # Database specific adapter options
+        # https://relstorage.readthedocs.io/en/latest/supported-databases.html
+        adapter_options = self.env.get(
+            "RELSTORAGE_ADAPTER_OPTIONS",
+            "",
+        ).strip().split(",")
+
+        settings = {
+            # General Settings
+            "name": self.env.get("RELSTORAGE_NAME"),
+            "read-only": self.env.get("RELSTORAGE_READ_ONLY"),
+            "keep-history": self.env.get("RELSTORAGE_KEEP_HISTORY"),
+            "commit-lock-timeout": self.env.get(
+                "RELSTORAGE_COMMIT_LOCK_TIMEOUT",
+            ),
+            "commit-lock-id": self.env.get("RELSTORAGE_COMMIT_LOCK_ID"),
+            "create-schema": self.env.get("RELSTORAGE_CREATE_SCHEMA"),
+
+            # Blobs
+            "blob-dir": self.env.get("RELSTORAGE_BLOB_DIR",
+                                     "/plone/instance/var/blobstorage"),
+            "shared-blob-dir": self.env.get("RELSTORAGE_SHARED_BLOB_DIR"),
+            "blob-cache-size": self.env.get("RELSTORAGE_BLOB_CACHE_SIZE"),
+            "blob-cache-size-check": self.env.get(
+                "RELSTORAGE_BLOB_CACHE_SIZE_CHECK",
+            ),
+            "blob-cache-size-check-external": self.env.get(
+                "RELSTORAGE_BLOB_CACHE_SIZE_CHECK_EXTERNAL",
+            ),
+            "blob-chunk-size": self.env.get("RELSTORAGE_BLOB_CHUNK_SIZE"),
+
+            # Replication
+            "replica-conf": self.env.get("RELSTORAGE_REPLICA_CONF"),
+            "ro-replica-conf": self.env.get("RELSTORAGE_RO_REPLICA_CONF"),
+            "replica-timeout": self.env.get("RELSTORAGE_REPLICA_TIMEOUT"),
+            "revert-when-stale": self.env.get("RELSTORAGE_REVERT_WHEN_STALE"),
+
+            # GC and Packing
+            "pack-gc": self.env.get("RELSTORAGE_PACK_GC"),
+            "pack-prepack-only": self.env.get("RELSTORAGE_PACK_PREPACK_ONLY"),
+            "pack-skip-prepack": self.env.get("RELSTORAGE_PACK_SKIP_PREPACK"),
+            "pack-batch-timeout": self.env.get("RELSTORAGE_PACK_BATCH_TIMEOUT"),
+            "pack-commit-busy-delay": self.env.get(
+                "RELSTORAGE_PACK_COMMIT_BUSY_DELAY",
+            ),
+
+            # Database Caching
+            "cache-prefix": self.env.get("RELSTORAGE_CACHE_PREFIX"),
+
+            # Local Caching
+            "cache-local-mb": self.env.get("RELSTORAGE_CACHE_LOCAL_MB"),
+            "cache-local-object-max": self.env.get(
+                "RELSTORAGE_CACHE_LOCAL_OBJECT_MAX",
+            ),
+            "cache-local-compression": self.env.get(
+                "RELSTORAGE_CACHE_LOCAL_COMPRESSION",
+            ),
+            "cache-delta-size-limit": self.env.get(
+                "RELSTORAGE_CACHE_DELTA_SIZE_LIMIT",
+            ),
+
+            # Persistent Local Caching
+            "cache-local-dir": self.env.get("RELSTORAGE_CACHE_LOCAL_DIR"),
+
+            # Deprecated Options
+            # ...
+        }
+
+        return "\n  ".join(adapter_options + [
+            "{} {}".format(x[0], x[1].strip()) for x in settings.items() if x[1]
+        ])
+
     def buildout(self):
         """ Buildout from environment variables
         """
         # Already configured
         if os.path.exists(self.custom_conf):
             return
+
+        admin_user =  self.env.get("ADMIN_USER", "admin").strip()
+        admin_password =  self.env.get("ADMIN_PASSWORD", "admin").strip()
+        user =   "{}:{}".format(admin_user, admin_password)
 
         findlinks = self.env.get("FIND_LINKS", "").strip().split()
 
@@ -160,23 +242,32 @@ class Environment(object):
 
         password = self.env.get("PASSWORD", "").strip()
 
+        relstorage = self.relstorage_conf()
+
+
         # If profiles not provided. Install ADDONS :default profiles
         if not profiles:
             for egg in eggs:
                 base = egg.split("=")[0]
                 profiles.append("%s:default" % base)
-
+        
+        enabled = bool(site)
         if not (eggs or zcml or develop or site or password):
             return
 
         buildout = BUILDOUT_TEMPLATE.format(
+            user=user or "admin:admin",
             password=password or "admin",
             findlinks="\n\t".join(findlinks),
             eggs="\n\t".join(eggs),
             zcml="\n\t".join(zcml),
             develop="\n\t".join(develop),
+            profiles="\n\t".join(profiles),
             versions="\n".join(versions),
             sources="\n".join(sources),
+            site=site or "senaite",
+            enabled=enabled,
+
         )
 
         if site:
@@ -192,6 +283,10 @@ class Environment(object):
             buildout += ZEO_INSTANCE_TEMPLATE.format(
                 zeoaddress=server,
             )
+        
+        # Add RelStorage configuration if needed
+        if relstorage:
+            buildout += RELSTORAGE_TEMPLATE.format(relstorage=relstorage)
 
         with open(self.custom_conf, 'w') as cfile:
             cfile.write(buildout)
@@ -220,6 +315,13 @@ ZEO_TEMPLATE = """
     </zeoclient>
 """.strip()
 
+RELSTORAGE_TEMPLATE = """
+
+[instance]
+rel-storage =
+  {relstorage}
+"""
+
 CORS_TEMPLACE = """<configure
   xmlns="http://namespaces.zope.org/zope">
   <configure
@@ -245,6 +347,11 @@ find-links += {findlinks}
 develop += {develop}
 eggs += {eggs}
 zcml += {zcml}
+
+[plonesite]
+enabled = {enabled}
+site-id = {site}
+profiles += {profiles}
 
 [versions]
 {versions}

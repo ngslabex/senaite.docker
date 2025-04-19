@@ -1,5 +1,6 @@
 dpkg-dev
 gcc
+g++
 python-dev
 libbz2-dev
 libc6-dev

@@ -4,7 +4,7 @@ FROM python:2.7-slim-buster
 # Set one or more individual labels
 LABEL maintainer="Ramon Bartl"
 LABEL email="rb@ridingbytes.com"
-LABEL senaite.core.version="v2.6.0"
+LABEL senaite.core.version="v2.6.3"
 
 # Set environment variables
 ENV PLONE_MAJOR=5.2 \
