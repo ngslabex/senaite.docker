@@ -36,10 +36,6 @@ RUN sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/source
  && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 
 # Note: we concatenate all commands to avoid multiple layer generation and reduce the image size
-<<<<<<< HEAD
-RUN apt-get update \
-    # Install system pakages
-=======
 RUN echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-check-valid-until && \
     sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/sources.list && \
     sed -i 's|http://security.debian.org|http://archive.debian.org|g' /etc/apt/sources.list && \
@@ -47,7 +43,6 @@ RUN echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-chec
     sed -i '/buster-updates/d' /etc/apt/sources.list && \
     apt-get update \
     # Install system packages
->>>>>>> upstream/master
     && apt-get install -y --no-install-recommends $(grep -vE "^\s*#" /build_deps.txt | tr "\n" " ") \
     && apt-get install -y --no-install-recommends $(grep -vE "^\s*#" /run_deps.txt | tr "\n" " ") \
     # Fetch unified installer
