@@ -4,13 +4,13 @@ FROM python:2.7-slim-buster
 # Set one or more individual labels
 LABEL maintainer="Ramon Bartl"
 LABEL email="rb@ridingbytes.com"
-LABEL senaite.core.version="v2.6.6"
+LABEL senaite.core.version="v2.5.0"
 
 # Set environment variables
 ENV PLONE_MAJOR=5.2 \
-    PLONE_VERSION=5.2.15 \
-    PLONE_MD5=714be71e21098ab148df8681196e78ce \
-    PLONE_UNIFIED_INSTALLER=Plone-5.2.15-UnifiedInstaller-1.0 \
+    PLONE_VERSION=5.2.14 \
+    PLONE_MD5=e8e1f774f069026319be3038631e0734 \
+    PLONE_UNIFIED_INSTALLER=Plone-5.2.14-UnifiedInstaller-1.0 \
     SENAITE_HOME=/home/senaite \
     SENAITE_USER=senaite \
     SENAITE_INSTANCE_HOME=/home/senaite/senaitelims \
@@ -30,30 +30,16 @@ COPY requirements.txt buildout.cfg $SENAITE_INSTANCE_HOME/
 # Copy the build dependencies and startup scripts
 COPY build_deps.txt run_deps.txt docker-initialize.py docker-entrypoint.sh /
 
-# Patch for outdated buster repositories (EOL)
-RUN sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/sources.list \
- && sed -i 's|http://security.debian.org|http://archive.debian.org|g' /etc/apt/sources.list \
- && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
-
- # COPY build_deps.txt... satırının olduğu yere ekleyebilirsin:
-COPY Plone-5.2.15-UnifiedInstaller-1.0.tgz /Plone.tgz
-
 # Note: we concatenate all commands to avoid multiple layer generation and reduce the image size
-RUN echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-check-valid-until && \
-    sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/sources.list && \
-    sed -i 's|http://security.debian.org|http://archive.debian.org|g' /etc/apt/sources.list && \
-    sed -i '/stretch-updates/d' /etc/apt/sources.list && \
-    sed -i '/buster-updates/d' /etc/apt/sources.list && \
+RUN sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list && \
     apt-get update \
-    # Install system packages
+    # Install system pakages
     && apt-get install -y --no-install-recommends $(grep -vE "^\s*#" /build_deps.txt | tr "\n" " ") \
     && apt-get install -y --no-install-recommends $(grep -vE "^\s*#" /run_deps.txt | tr "\n" " ") \
     # Fetch unified installer
-    # buster's CA bundle is EOL and no longer trusts launchpad's TLS
-    # chain, so skip the cert check; the MD5 verification below still
-    # guarantees the integrity of the downloaded archive
-#    && wget --no-check-certificate --tries=10 --waitretry=5 -O Plone.tgz https://launchpad.net/plone/$PLONE_MAJOR/$PLONE_VERSION/+download/$PLONE_UNIFIED_INSTALLER.tgz \
-#    && echo "$PLONE_MD5 Plone.tgz" | md5sum -c - \
+    && wget -O Plone.tgz https://launchpad.net/plone/$PLONE_MAJOR/$PLONE_VERSION/+download/$PLONE_UNIFIED_INSTALLER.tgz \
+    && echo "$PLONE_MD5 Plone.tgz" | md5sum -c - \
     && tar -xzf /Plone.tgz \
     && cp -rv $PLONE_UNIFIED_INSTALLER/base_skeleton/* $SENAITE_INSTANCE_HOME \
     && cp -v $PLONE_UNIFIED_INSTALLER/buildout_templates/buildout.cfg $SENAITE_INSTANCE_HOME/buildout-base.cfg \

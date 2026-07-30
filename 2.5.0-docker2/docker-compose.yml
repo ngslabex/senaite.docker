@@ -1,15 +1,15 @@
-version: "3.9"
+version: "3"
 
 services:
 
   zeo:
-    image: ersankose/senaite:v2.6.6
+    image: senaite/senaite:v2.5.0
     command: zeo
     volumes:
       - ./data:/data
 
   instance1:
-    image: ersankose/senaite:v2.6.6
+    image: senaite/senaite:v2.5.0
     ports:
       - 8081:8080
     links:
@@ -18,12 +18,12 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 1024MB
+          memory: 2048MB
     environment:
       ZEO_ADDRESS: "zeo:8080"
 
   instance2:
-    image: ersankose/senaite:v2.6.6
+    image: senaite/senaite:v2.5.0
     ports:
       - 8082:8080
     links:
@@ -32,7 +32,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 1024MB
+          memory: 2048MB
     environment:
       ZEO_ADDRESS: "zeo:8080"
 
