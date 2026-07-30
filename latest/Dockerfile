@@ -35,6 +35,9 @@ RUN sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/source
  && sed -i 's|http://security.debian.org|http://archive.debian.org|g' /etc/apt/sources.list \
  && echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 
+ # COPY build_deps.txt... satırının olduğu yere ekleyebilirsin:
+COPY Plone-5.2.15-UnifiedInstaller-1.0.tgz /Plone.tgz
+
 # Note: we concatenate all commands to avoid multiple layer generation and reduce the image size
 RUN echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-check-valid-until && \
     sed -i 's|http://deb.debian.org|http://archive.debian.org|g' /etc/apt/sources.list && \
@@ -49,8 +52,8 @@ RUN echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-chec
     # buster's CA bundle is EOL and no longer trusts launchpad's TLS
     # chain, so skip the cert check; the MD5 verification below still
     # guarantees the integrity of the downloaded archive
-    && wget --no-check-certificate --tries=10 --waitretry=5 -O Plone.tgz https://launchpad.net/plone/$PLONE_MAJOR/$PLONE_VERSION/+download/$PLONE_UNIFIED_INSTALLER.tgz \
-    && echo "$PLONE_MD5 Plone.tgz" | md5sum -c - \
+#    && wget --no-check-certificate --tries=10 --waitretry=5 -O Plone.tgz https://launchpad.net/plone/$PLONE_MAJOR/$PLONE_VERSION/+download/$PLONE_UNIFIED_INSTALLER.tgz \
+#    && echo "$PLONE_MD5 Plone.tgz" | md5sum -c - \
     && tar -xzf /Plone.tgz \
     && cp -rv $PLONE_UNIFIED_INSTALLER/base_skeleton/* $SENAITE_INSTANCE_HOME \
     && cp -v $PLONE_UNIFIED_INSTALLER/buildout_templates/buildout.cfg $SENAITE_INSTANCE_HOME/buildout-base.cfg \
